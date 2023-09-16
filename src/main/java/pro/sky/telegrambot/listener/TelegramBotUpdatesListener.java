@@ -53,11 +53,12 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             logger.info("Processing update: {}", update);
             Message message = update.message();
             Long chatId = message.chat().id();
-            LocalDateTime dateTime;
             if (update.message() != null && message.text() != null) {
                 String userName = message.chat().firstName();
                 String text = message.text();
                 Matcher matcher = PATTERN.matcher(text);
+                LocalDateTime dateTime = parseLocalDateTime(matcher.group(1));
+
                 if (text.equals("/start")) {
                     telegramBotService.sendMessage(chatId,
                             userName + "! Тестовый бот приветствует вас!\n" +
@@ -65,14 +66,10 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                                     "*01.01.2023 20:00 Сделать домашнюю работу*",
                             ParseMode.Markdown);
                 } else if (matcher.matches() &&
-                        (dateTime = parseLocalDateTime(matcher.group(1))) != null ){
-                    try {
+                        dateTime != null ){
                         notificationTaskService.saveNotification(matcher.group(2), dateTime, chatId);
                         telegramBotService.sendMessage(chatId,userName + ", ваша задача успешно запланирована!");
-                    } catch (DateInThePastException e) {
-                        telegramBotService.sendMessage(chatId,e.getMessage());
-                    }
-                }  else if (matcher.matches() && parseLocalDateTime(matcher.group(1)) == null) {
+                }  else if (matcher.matches() && dateTime == null) {
                     telegramBotService.sendMessage(chatId, "Формат даты и времени не верный. Попробуйте снова.");
                     logger.warn("Date and time format is not correct in " + chatId + " chat.");
                 }
